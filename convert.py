@@ -1,9 +1,12 @@
+from curses import window
 import os
 import requests
 import typer
 import zipfile
 
 from dicomexporter.exporter import convertDICOMVolumeToVTKFile
+from dicomexporter.dicom import createITKImageReader
+from dicomexporter.itk_utils import getMetadata
 from rich.progress import Progress, SpinnerColumn, TextColumn, DownloadColumn
 
 app = typer.Typer()
@@ -66,12 +69,31 @@ def extract(filename: str):
     return extract_path
 
 
+def firstFloat(v):
+  return float(v.split('\\')[0])
+
+
+def determine_levels(dicom_directory):
+    with Progress(
+        SpinnerColumn(finished_text="✔️"),
+        TextColumn("[progress.description]{task.description}"),
+    ) as progress:
+        levels = progress.add_task("Determining levels...", total=1)
+        itkReader = createITKImageReader(dicom_directory)
+        window_center = getMetadata(itkReader, '0028|1050', firstFloat)
+        window_width = getMetadata(itkReader, '0028|1051', firstFloat)
+        progress.advance(levels)
+    return (window_center, window_width)
+
+
 @app.command()
 def main(case_identifier: str):
-    url = retrieve_pseudo_dicom_url(case_identifier)
+    # url = retrieve_pseudo_dicom_url(case_identifier)
     # dicom_filename = download_pseudo_dicom(case_identifier, url)
     dicom_filename = f'{case_identifier}.zip'
     extracted_dicom_path = extract(dicom_filename)
+    levels = determine_levels(extracted_dicom_path)
+    print(levels)
     with Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
@@ -83,6 +105,7 @@ def main(case_identifier: str):
             overwrite=True
         )
         progress.advance(convert)
+
 
 
 if __name__ == '__main__':
