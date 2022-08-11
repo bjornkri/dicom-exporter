@@ -16,25 +16,34 @@ STUDYRESOURCELIST = '/study-resources/'
 TOKEN = os.getenv('TOKEN')
 SERVER = os.getenv('SERVER')
 
-def retrieve_pseudo_dicom_url(case_identifier: str):
+
+def get_study_id(case_identifier: str):
     with Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
     ) as progress:
-        task1 = progress.add_task(description='Fetching case...', total=1)
+        get_case = progress.add_task(description='Fetching case...', total=1)
         headers = {'Authorization': f'Token {TOKEN}'}
         case_r = requests.get(f'{SERVER}{CASESLIST}',
             params={'case_identifier': case_identifier},
             headers=headers)
         study_id = case_r.json()['results'][0]['studyId']
-        progress.advance(task1)
+        progress.advance(get_case)
+    return study_id
 
-        task2 = progress.add_task(description='Locating DICOM...', total=1)
+
+def retrieve_pseudo_dicom_url(study_id: str):
+    with Progress(
+        SpinnerColumn(finished_text="✔️"),
+        TextColumn("[progress.description]{task.description}"),
+    ) as progress:
+        get_url = progress.add_task(description='Locating DICOM...', total=1)
+        headers = {'Authorization': f'Token {TOKEN}'}
         studyresource_r = requests.get(f'{SERVER}{STUDYRESOURCELIST}',
-            params={'type': 1, 'studyId': study_id},
+            params={'type': 1, 'study_id': study_id},
             headers=headers)
         studyresource_url = studyresource_r.json()['results'][0]['readUrl']
-        progress.advance(task2)
+        progress.advance(get_url)
     return studyresource_url
 
 
@@ -88,9 +97,10 @@ def determine_levels(dicom_directory):
 
 @app.command()
 def main(case_identifier: str):
-    # url = retrieve_pseudo_dicom_url(case_identifier)
-    # dicom_filename = download_pseudo_dicom(case_identifier, url)
-    dicom_filename = f'{case_identifier}.zip'
+    study_id = get_study_id(case_identifier)
+    url = retrieve_pseudo_dicom_url(study_id)
+    dicom_filename = download_pseudo_dicom(case_identifier, url)
+    # dicom_filename = f'{case_identifier}.zip'
     extracted_dicom_path = extract(dicom_filename)
     levels = determine_levels(extracted_dicom_path)
     print(levels)
@@ -101,11 +111,10 @@ def main(case_identifier: str):
         convert = progress.add_task("Converting...", total=1)
         convertDICOMVolumeToVTKFile(
             extracted_dicom_path,
-            'outputs/output.vtkjs',
+            f'outputs/{case_identifier}.vtkjs',
             overwrite=True
         )
         progress.advance(convert)
-
 
 
 if __name__ == '__main__':
