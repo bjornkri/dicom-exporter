@@ -1,3 +1,4 @@
+import os
 import requests
 import typer
 import zipfile
@@ -7,6 +8,10 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, DownloadColumn
 
 app = typer.Typer()
 
+CASESLIST = '/cases/'
+STUDYRESOURCELIST = '/study-resources/'
+TOKEN = os.getenv('TOKEN')
+SERVER = os.getenv('SERVER')
 
 def retrieve_pseudo_dicom_url(case_identifier: str):
     with Progress(
