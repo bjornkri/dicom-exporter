@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import requests
+import shutil
 import tempfile
 import typer
 import zipfile
@@ -77,6 +78,8 @@ def extract(filename: str):
         extract = progress.add_task("Extracting...", total=1)
         zip_ref.extractall(extract_path)
         progress.advance(extract)
+    # Remove the zip file
+    os.remove(filename)
     return extract_path
 
 
@@ -110,6 +113,8 @@ def convert(dicom_path):
             overwrite=True
         )
         progress.advance(convert)
+    # Remove directory after use
+    shutil.rmtree(dicom_path)
     return output
 
 
@@ -148,6 +153,8 @@ def upload_volume_to(url, source):
             url, data=data,
         )
         progress.advance(upload)
+    # Remove directiory after use
+    shutil.rmtree(source)
 
 
 @app.command()
