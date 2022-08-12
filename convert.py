@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import requests
+import tempfile
 import typer
 import zipfile
 
@@ -96,6 +97,22 @@ def determine_levels(dicom_directory):
     return (window_center, window_width)
 
 
+def convert(dicom_path, case_identifier):
+    output = f'outputs/{case_identifier}.vtkjs'
+    with Progress(
+        SpinnerColumn(finished_text="✔️"),
+        TextColumn("[progress.description]{task.description}"),
+    ) as progress:
+        convert = progress.add_task("Converting...", total=1)
+        convertDICOMVolumeToVTKFile(
+            dicom_path,
+            output,
+            overwrite=True
+        )
+        progress.advance(convert)
+    return output
+
+
 def create_study_resource(study_id, levels):
     with open('outputs/output.vtkjs/index.json', 'r') as f, Progress(
             SpinnerColumn(finished_text="✔️"),
@@ -118,11 +135,11 @@ def create_study_resource(study_id, levels):
     return studyresource_r.json()
 
 
-def upload_volume_to(url):
-    path = 'outputs/output.vtkjs/data/'
-    name = glob.glob(f'{path}*.gz')[0].split('/')[-1]
+def upload_volume_to(url, source):
+    dicom_path = f'{source}/data/'
+    name = glob.glob(f'{dicom_path}*.gz')[0].split('/')[-1]
 
-    with open(f'{path}{name}', 'rb') as data, Progress(
+    with open(f'{dicom_path}{name}', 'rb') as data, Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
     ) as progress:
@@ -140,19 +157,9 @@ def main(case_identifier: str):
     dicom_filename = download_pseudo_dicom(case_identifier, url)
     extracted_dicom_path = extract(dicom_filename)
     levels = determine_levels(extracted_dicom_path)
-    with Progress(
-        SpinnerColumn(finished_text="✔️"),
-        TextColumn("[progress.description]{task.description}"),
-    ) as progress:
-        convert = progress.add_task("Converting...", total=1)
-        convertDICOMVolumeToVTKFile(
-            extracted_dicom_path,
-            f'outputs/{case_identifier}.vtkjs',
-            overwrite=True
-        )
-        progress.advance(convert)
+    converted_dicom = convert(extracted_dicom_path, case_identifier)
     sr = create_study_resource(study_id, levels)
-    upload_volume_to(sr['writeUrl'])
+    upload_volume_to(sr['writeUrl'], converted_dicom)
 
 
 if __name__ == '__main__':
