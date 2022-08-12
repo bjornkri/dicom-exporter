@@ -122,16 +122,13 @@ def upload_volume_to(url):
     path = 'outputs/output.vtkjs/data/'
     name = glob.glob(f'{path}*.gz')[0].split('/')[-1]
 
-    with open(f'{path}{name}', 'rb') as f, Progress(
+    with open(f'{path}{name}', 'rb') as data, Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
     ) as progress:
         upload = progress.add_task("Uploading vtkjs...", total=1)
-        files = { 'file': (
-            name, f)
-        }
         requests.put(
-            url, files=files,
+            url, data=data,
         )
         progress.advance(upload)
 
