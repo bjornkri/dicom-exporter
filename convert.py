@@ -49,10 +49,10 @@ def retrieve_pseudo_dicom_url(study_id: str):
     return studyresource_url
 
 
-def download_pseudo_dicom(case_identifier: str, url: str):
+def download_pseudo_dicom(url: str):
     r = requests.get(url, stream=True)
-    path = f'{case_identifier}.zip'
-    with open(path, 'wb') as f, Progress(
+    fd, path = tempfile.mkstemp(suffix='.zip')
+    with os.fdopen(fd, 'wb') as f, Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
         DownloadColumn(),
@@ -69,7 +69,7 @@ def download_pseudo_dicom(case_identifier: str, url: str):
 
 
 def extract(filename: str):
-    extract_path = 'ziptest'
+    extract_path = tempfile.mkdtemp()
     with zipfile.ZipFile(filename, 'r') as zip_ref, Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
@@ -97,8 +97,8 @@ def determine_levels(dicom_directory):
     return (window_center, window_width)
 
 
-def convert(dicom_path, case_identifier):
-    output = f'outputs/{case_identifier}.vtkjs'
+def convert(dicom_path):
+    output = tempfile.mkdtemp(suffix='.vtkjs')
     with Progress(
         SpinnerColumn(finished_text="✔️"),
         TextColumn("[progress.description]{task.description}"),
@@ -113,8 +113,8 @@ def convert(dicom_path, case_identifier):
     return output
 
 
-def create_study_resource(study_id, levels):
-    with open('outputs/output.vtkjs/index.json', 'r') as f, Progress(
+def create_study_resource(study_id, source, levels):
+    with open(f'{source}/index.json', 'r') as f, Progress(
             SpinnerColumn(finished_text="✔️"),
             TextColumn("[progress.description]{task.description}"),
         ) as progress:
@@ -154,11 +154,11 @@ def upload_volume_to(url, source):
 def main(case_identifier: str):
     study_id = get_study_id(case_identifier)
     url = retrieve_pseudo_dicom_url(study_id)
-    dicom_filename = download_pseudo_dicom(case_identifier, url)
+    dicom_filename = download_pseudo_dicom(url)
     extracted_dicom_path = extract(dicom_filename)
     levels = determine_levels(extracted_dicom_path)
-    converted_dicom = convert(extracted_dicom_path, case_identifier)
-    sr = create_study_resource(study_id, levels)
+    converted_dicom = convert(extracted_dicom_path)
+    sr = create_study_resource(study_id, converted_dicom, levels)
     upload_volume_to(sr['writeUrl'], converted_dicom)
 
 
