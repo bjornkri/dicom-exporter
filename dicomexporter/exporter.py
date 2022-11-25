@@ -146,7 +146,6 @@ def convertDICOMVolumeToVTKFile(
         reSliceFilter.SetResliceAxes(reSliceMatrix)
         reSliceFilter.Update()
 
-        volumeData = reSliceFilter.GetOutput()
         volumeData.ShallowCopy(reSliceFilter.GetOutput())
 
     # Set Field Data #
@@ -167,10 +166,10 @@ def convertDICOMVolumeToVTKFile(
         if compress:
             writer.SetCompressorTypeToZLib()
             writer.SetBlockSize(blockSize)
+        writer.SetFileName(output_file_path)
     else: # vtkjs
         writer = vtk.vtkJSONDataSetWriter()
-
-    writer.SetFileName(output_file_path)
+        writer.GetArchiver().SetArchiveName(output_file_path)
 
     # Set writer volume data #
     writer.SetInputData(volumeData)
