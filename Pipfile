@@ -9,6 +9,7 @@ vtk = "*"
 itk = "*"
 numpy = "*"
 typer = {extras = ["all"], version = "*"}
+dicom-exporter = {path = "."}
 
 [dev-packages]
 
