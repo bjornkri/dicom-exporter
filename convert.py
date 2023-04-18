@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import shutil
+import sys
 import tempfile
 import typer
 import zipfile
@@ -157,16 +158,38 @@ def upload_volume_to(url, source):
     shutil.rmtree(source)
 
 
+def report_error(study_id, e):
+    print(f'Error: {e}')
+    print(f'Study_ID: {study_id}')
+    studyresource_r = requests.get(f'{SERVER}{STUDYRESOURCELIST}',
+            params={'type': 1, 'study_id': study_id},
+            headers=HEADERS)
+    studyresource_id = studyresource_r.json()['results'][0]['id']
+    print(f'StudyResource_ID: {studyresource_id}')
+    # PUT the error message to the study resource
+    attribs = {
+        'error': str(e)
+    }
+    # JSON encode the attributes
+    attribs = json.dumps(attribs)
+    resp = requests.patch(f'{SERVER}{STUDYRESOURCELIST}{studyresource_id}/',
+        data={'attributes': attribs},
+        headers=HEADERS)
+
+
 @app.command()
 def main(case_identifier: str):
     study_id = get_study_id(case_identifier)
-    url = retrieve_pseudo_dicom_url(study_id)
-    dicom_filename = download_pseudo_dicom(url)
-    extracted_dicom_path = extract(dicom_filename)
-    levels = determine_levels(extracted_dicom_path)
-    converted_dicom = convert(extracted_dicom_path)
-    sr = create_study_resource(study_id, converted_dicom, levels)
-    upload_volume_to(sr['writeUrl'], converted_dicom)
+    try:
+        url = retrieve_pseudo_dicom_url(study_id)
+        dicom_filename = download_pseudo_dicom(url)
+        extracted_dicom_path = extract(dicom_filename)
+        levels = determine_levels(extracted_dicom_path)
+        converted_dicom = convert(extracted_dicom_path)
+        sr = create_study_resource(study_id, converted_dicom, levels)
+        upload_volume_to(sr['writeUrl'], converted_dicom)
+    except Exception as e:
+        report_error(study_id, e)
 
 
 if __name__ == '__main__':
