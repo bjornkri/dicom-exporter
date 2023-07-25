@@ -95,8 +95,8 @@ def determine_levels(dicom_directory):
     ) as progress:
         levels = progress.add_task("Determining levels...", total=1)
         itkReader = createITKImageReader(dicom_directory)
-        window_center = getMetadata(itkReader, '0028|1050', firstFloat)
-        window_width = getMetadata(itkReader, '0028|1051', firstFloat)
+        window_center = getMetadata(itkReader, '0028|1050', firstFloat) or 1075
+        window_width = getMetadata(itkReader, '0028|1051', firstFloat) or 230
         progress.advance(levels)
     return (window_center, window_width)
 
