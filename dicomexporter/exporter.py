@@ -90,9 +90,8 @@ def convertDICOMVolumeToVTKFile(
     position = getMetadataList(itkReader, '0020|0032', float)
     orientation = getMetadataList(itkReader, '0020|0037', float)
     spacingXY = getMetadataList(itkReader, '0028|0030', float)
-
-    window_center = getMetadata(itkReader, '0028|1050', firstFloat)
-    window_width = getMetadata(itkReader, '0028|1051', firstFloat)
+    window_center = getMetadata(itkReader, '0028|1050', firstFloat) or 1075
+    window_width = getMetadata(itkReader, '0028|1051', firstFloat) or 230
     del itkReader
 
     # Get original volume data #
